@@ -1,16 +1,22 @@
 import express from 'express';
+import { authenticateToken } from '../middleware/auth.js';
 import { uploadSingle, deleteFile, getFileInfo } from '../controllers/uploadController.js';
 
 const router = express.Router();
 
-// Placeholder routes - will be implemented in next phase
-router.post('/single', authenticateToken, (req, res) => {
-  res.json({ message: 'File upload routes - coming soon' });
-}
-)
-// File upload routes
-router.post('/single', uploadSingle);
-router.get('/:filename', getFileInfo);
-router.delete('/:filename', deleteFile);
+// @route   POST /api/upload/single
+// @desc    Upload single file
+// @access  Private
+router.post('/single', authenticateToken, uploadSingle);
+
+// @route   DELETE /api/upload/:filename
+// @desc    Delete uploaded file
+// @access  Private
+router.delete('/:filename', authenticateToken, deleteFile);
+
+// @route   GET /api/upload/:filename
+// @desc    Get file information
+// @access  Private
+router.get('/:filename', authenticateToken, getFileInfo);
 
 export default router;

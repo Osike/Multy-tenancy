@@ -3,184 +3,379 @@ import mongoose from 'mongoose';
 const companySchema = new mongoose.Schema({
   companyName: {
     type: String,
-    required: [true, 'Company name is required'],
-    unique: true,
+    required: true,
     trim: true,
     maxlength: [100, 'Company name cannot exceed 100 characters'],
+    // removed line  index: true
+  },
+  businessRegistrationNumber: {
+    type: String,
+    trim: true,
+    maxlength: [50, 'Business registration number cannot exceed 50 characters'],
+    sparse: true, // Allows multiple null values
+  },
+  taxId: {
+    type: String,
+    trim: true,
+    maxlength: [50, 'Tax ID cannot exceed 50 characters'],
+    sparse: true,
   },
   contactEmail: {
     type: String,
-    required: [true, 'Contact email is required'],
-    unique: true,
+    required: true,
+    trim: true,
     lowercase: true,
-    match: [
-      /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/,
-      'Please provide a valid email address',
-    ],
+    validate: {
+      validator: function(email) {
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+      },
+      message: 'Please provide a valid email address'
+    },
+    maxlength: [100, 'Email cannot exceed 100 characters'],
+  },
+  contactPhone: {
+    type: String,
+    required: true,
+    trim: true,
+    validate: {
+      validator: function(phone) {
+        return /^[\+]?[1-9][\d]{0,15}$/.test(phone.replace(/[\s\-\(\)]/g, ''));
+      },
+      message: 'Please provide a valid phone number'
+    },
+    maxlength: [20, 'Phone number cannot exceed 20 characters'],
   },
   address: {
-    type: String,
-    trim: true,
-    maxlength: [500, 'Address cannot exceed 500 characters'],
-  },
-  phoneNumber: {
-    type: String,
-    trim: true,
-    match: [/^\+?[\d\s\-\(\)]+$/, 'Please provide a valid phone number'],
-  },
-  registrationNumber: {
-    type: String,
-    trim: true,
-    unique: true,
-    sparse: true, // Allows multiple null values
-  },
-  status: {
-    type: String,
-    enum: ['Active', 'Inactive', 'Suspended'],
-    default: 'Active',
-  },
-  subscriptionPlan: {
-    type: String,
-    enum: ['Basic', 'Premium', 'Enterprise'],
-    default: 'Basic',
-  },
-  maxUsers: {
-    type: Number,
-    default: 10,
-    min: [1, 'Company must allow at least 1 user'],
-  },
-  maxTrucks: {
-    type: Number,
-    default: 50,
-    min: [1, 'Company must allow at least 1 truck'],
-  },
-  // UPDATED: Added features field for multi-tenant feature management
-  features: {
-    type: [String],
-    default: ['trip_management', 'analytics', 'customer_management'],
-    enum: [
-      'trip_management',
-      'analytics', 
-      'customer_management',
-      'fleet_tracking',
-      'driver_management',
-      'maintenance_tracking',
-      'reports_export',
-      'api_access'
-    ]
-  },
-  // UPDATED: Added company logo field
-  logoUrl: {
-    type: String,
-    trim: true,
-  },
-  // UPDATED: Added company settings
-  settings: {
-    timezone: {
+    street: {
       type: String,
-      default: 'UTC'
+      required: true,
+      trim: true,
+      maxlength: [200, 'Street address cannot exceed 200 characters'],
     },
-    currency: {
+    city: {
       type: String,
-      default: 'USD'
+      required: true,
+      trim: true,
+      maxlength: [100, 'City cannot exceed 100 characters'],
     },
-    dateFormat: {
+    state: {
       type: String,
-      default: 'MM/DD/YYYY'
+      required: true,
+      trim: true,
+      maxlength: [50, 'State cannot exceed 50 characters'],
     },
-    language: {
+    zipCode: {
       type: String,
-      default: 'en'
-    }
+      required: true,
+      trim: true,
+      maxlength: [20, 'ZIP code cannot exceed 20 characters'],
+    },
+    country: {
+      type: String,
+      trim: true,
+      maxlength: [50, 'Country cannot exceed 50 characters'],
+      default: 'USA',
+    },
   },
-  // UPDATED: Added subscription details
+  industry: {
+    type: String,
+    enum: ['Logistics', 'Transportation', 'Freight', 'Delivery', 'Moving', 'Other'],
+    default: 'Logistics',
+  },
+  companySize: {
+    type: String,
+    enum: ['Small (1-10)', 'Medium (11-50)', 'Large (51-200)', 'Enterprise (200+)'],
+    default: 'Small (1-10)',
+  },
+  website: {
+    type: String,
+    trim: true,
+    validate: {
+      validator: function(url) {
+        if (!url) return true; // Optional field
+        return /^https?:\/\/.+\..+/.test(url);
+      },
+      message: 'Please provide a valid website URL'
+    },
+    maxlength: [200, 'Website URL cannot exceed 200 characters'],
+  },
+  logo: {
+    fileName: {
+      type: String,
+      maxlength: [255, 'Logo file name cannot exceed 255 characters'],
+    },
+    filePath: {
+      type: String,
+      maxlength: [500, 'Logo file path cannot exceed 500 characters'],
+    },
+    uploadedAt: {
+      type: Date,
+    },
+  },
   subscription: {
-    planId: {
+    plan: {
       type: String,
-      default: 'basic'
+      enum: ['Basic', 'Professional', 'Enterprise'],
+      default: 'Basic',
+    },
+    status: {
+      type: String,
+      enum: ['Active', 'Suspended', 'Cancelled', 'Trial'],
+      default: 'Trial',
     },
     startDate: {
       type: Date,
-      default: Date.now
+      default: Date.now,
     },
     endDate: {
       type: Date,
-      default: () => new Date(Date.now() + 365 * 24 * 60 * 60 * 1000) // 1 year from now
+      required: true,
+      validate: {
+        validator: function(date) {
+          return date > this.subscription.startDate;
+        },
+        message: 'Subscription end date must be after start date'
+      }
     },
-    isActive: {
+    maxUsers: {
+      type: Number,
+      default: 5,
+      min: [1, 'Maximum users must be at least 1'],
+      max: [1000, 'Maximum users cannot exceed 1000'],
+    },
+    maxTrucks: {
+      type: Number,
+      default: 10,
+      min: [1, 'Maximum trucks must be at least 1'],
+      max: [10000, 'Maximum trucks cannot exceed 10000'],
+    },
+    features: [{
+      type: String,
+      enum: [
+        'Trip Management',
+        'Driver Management', 
+        'Truck Management',
+        'Customer Management',
+        'Financial Reports',
+        'Advanced Analytics',
+        'API Access',
+        'White Label',
+        'Priority Support'
+      ]
+    }]
+  },
+  settings: {
+    timezone: {
+      type: String,
+      default: 'America/New_York',
+    },
+    currency: {
+      type: String,
+      default: 'USD',
+      enum: ['USD', 'CAD', 'EUR', 'GBP'],
+    },
+    dateFormat: {
+      type: String,
+      default: 'MM/DD/YYYY',
+      enum: ['MM/DD/YYYY', 'DD/MM/YYYY', 'YYYY-MM-DD'],
+    },
+    measurementUnit: {
+      type: String,
+      default: 'Imperial',
+      enum: ['Imperial', 'Metric'],
+    },
+    emailNotifications: {
       type: Boolean,
-      default: true
-    }
-  }
+      default: true,
+    },
+    smsNotifications: {
+      type: Boolean,
+      default: false,
+    },
+  },
+  billingInfo: {
+    billingEmail: {
+      type: String,
+      trim: true,
+      lowercase: true,
+      validate: {
+        validator: function(email) {
+          if (!email) return true; // Optional field
+          return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        },
+        message: 'Please provide a valid billing email address'
+      },
+    },
+    paymentMethod: {
+      type: String,
+      enum: ['Credit Card', 'Bank Transfer', 'PayPal', 'Invoice'],
+    },
+    lastPaymentDate: {
+      type: Date,
+    },
+    nextBillingDate: {
+      type: Date,
+    },
+  },
+  stats: {
+    totalUsers: {
+      type: Number,
+      default: 0,
+    },
+    totalTrucks: {
+      type: Number,
+      default: 0,
+    },
+    totalTrips: {
+      type: Number,
+      default: 0,
+    },
+    totalRevenue: {
+      type: Number,
+      default: 0,
+    },
+    lastActivityDate: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+  isActive: {
+    type: Boolean,
+    default: true,
+  },
+  isVerified: {
+    type: Boolean,
+    default: false,
+  },
+  verificationToken: {
+    type: String,
+  },
+  notes: {
+    type: String,
+    trim: true,
+    maxlength: [1000, 'Notes cannot exceed 1000 characters'],
+  },
 }, {
   timestamps: true,
 });
 
-// UPDATED: Removed duplicate companyName index since unique: true already creates one
-// companySchema.index({ companyName: 1 }); // REMOVED - This was causing the duplicate warning
+// Indexes for better query performance
+companySchema.index({ companyName: 1 });
+companySchema.index({ contactEmail: 1 }, { unique: true });
+companySchema.index({ 'subscription.status': 1 });
+companySchema.index({ isActive: 1 });
+companySchema.index({ createdAt: -1 });
 
-// UPDATED: Keep only the status index and add compound indexes for better performance
-companySchema.index({ status: 1 });
-companySchema.index({ status: 1, subscriptionPlan: 1 }); // ADDED: Compound index for filtering
-companySchema.index({ 'subscription.isActive': 1 }); // ADDED: Index for active subscriptions
-
-// Virtual for getting company users count
-companySchema.virtual('userCount', {
-  ref: 'User',
-  localField: '_id',
-  foreignField: 'companyId',
-  count: true,
+// Virtual for full address
+companySchema.virtual('fullAddress').get(function() {
+  const parts = [];
+  if (this.address.street) parts.push(this.address.street);
+  if (this.address.city) parts.push(this.address.city);
+  if (this.address.state) parts.push(this.address.state);
+  if (this.address.zipCode) parts.push(this.address.zipCode);
+  if (this.address.country && this.address.country !== 'USA') parts.push(this.address.country);
+  
+  return parts.join(', ');
 });
 
-// Virtual for getting company trucks count
-companySchema.virtual('truckCount', {
-  ref: 'Truck',
-  localField: '_id',
-  foreignField: 'companyId',
-  count: true,
-});
-
-// UPDATED: Added virtual for active users count
-companySchema.virtual('activeUserCount', {
-  ref: 'User',
-  localField: '_id',
-  foreignField: 'companyId',
-  count: true,
-  match: { isActive: true }
-});
-
-// UPDATED: Added virtual for subscription status
+// Virtual for subscription status
 companySchema.virtual('subscriptionStatus').get(function() {
-  if (!this.subscription.isActive) return 'inactive';
-  if (new Date() > this.subscription.endDate) return 'expired';
-  return 'active';
+  const now = new Date();
+  
+  if (this.subscription.endDate < now) {
+    return 'Expired';
+  }
+  
+  const daysUntilExpiry = Math.ceil((this.subscription.endDate - now) / (1000 * 60 * 60 * 24));
+  
+  if (daysUntilExpiry <= 7) {
+    return 'Expiring Soon';
+  }
+  
+  return this.subscription.status;
 });
 
-// UPDATED: Added method to check if company has specific feature
-companySchema.methods.hasFeature = function(featureName) {
-  return this.features.includes(featureName);
-};
+// Virtual for usage percentage
+companySchema.virtual('usageStats').get(function() {
+  return {
+    userUsage: this.subscription.maxUsers > 0 ? 
+      Math.round((this.stats.totalUsers / this.subscription.maxUsers) * 100) : 0,
+    truckUsage: this.subscription.maxTrucks > 0 ? 
+      Math.round((this.stats.totalTrucks / this.subscription.maxTrucks) * 100) : 0,
+  };
+});
 
-// UPDATED: Added method to check if company is within user limit
-companySchema.methods.canAddUsers = function(additionalUsers = 1) {
-  // This would need to be populated or calculated separately
-  return true; // Placeholder - implement actual logic based on current user count
-};
-
-// UPDATED: Added method to check if company is within truck limit
-companySchema.methods.canAddTrucks = function(additionalTrucks = 1) {
-  // This would need to be populated or calculated separately
-  return true; // Placeholder - implement actual logic based on current truck count
-};
-
-// UPDATED: Pre-save middleware to ensure subscription dates are valid
+// Pre-save middleware
 companySchema.pre('save', function(next) {
-  if (this.subscription.startDate > this.subscription.endDate) {
-    const error = new Error('Subscription start date cannot be after end date');
-    return next(error);
+  // Set default billing email to contact email if not provided
+  if (!this.billingInfo.billingEmail) {
+    this.billingInfo.billingEmail = this.contactEmail;
   }
+  
+  // Update last activity date
+  this.stats.lastActivityDate = new Date();
+  
   next();
 });
+
+// Static method to get active companies
+companySchema.statics.getActiveCompanies = function() {
+  return this.find({
+    isActive: true,
+    'subscription.status': 'Active'
+  }).select('companyName contactEmail subscription.plan stats');
+};
+
+// Static method to get companies needing renewal
+companySchema.statics.getCompaniesNeedingRenewal = function(days = 30) {
+  const futureDate = new Date();
+  futureDate.setDate(futureDate.getDate() + days);
+  
+  return this.find({
+    isActive: true,
+    'subscription.endDate': { $lte: futureDate },
+    'subscription.status': { $in: ['Active', 'Trial'] }
+  }).select('companyName contactEmail subscription.endDate subscription.plan');
+};
+
+// Instance method to check if company can add more users
+companySchema.methods.canAddUsers = function(count = 1) {
+  return (this.stats.totalUsers + count) <= this.subscription.maxUsers;
+};
+
+// Instance method to check if company can add more trucks
+companySchema.methods.canAddTrucks = function(count = 1) {
+  return (this.stats.totalTrucks + count) <= this.subscription.maxTrucks;
+};
+
+// Instance method to update usage stats
+companySchema.methods.updateStats = async function() {
+  const User = mongoose.model('User');
+  const Truck = mongoose.model('Truck');
+  const Trip = mongoose.model('Trip');
+  
+  const [userCount, truckCount, tripStats] = await Promise.all([
+    User.countDocuments({ companyId: this._id, isActive: true }),
+    Truck.countDocuments({ companyId: this._id, isActive: true }),
+    Trip.aggregate([
+      { $match: { companyId: this._id } },
+      {
+        $group: {
+          _id: null,
+          totalTrips: { $sum: 1 },
+          totalRevenue: { $sum: '$rate' }
+        }
+      }
+    ])
+  ]);
+  
+  this.stats.totalUsers = userCount;
+  this.stats.totalTrucks = truckCount;
+  this.stats.totalTrips = tripStats[0]?.totalTrips || 0;
+  this.stats.totalRevenue = tripStats[0]?.totalRevenue || 0;
+  
+  return this.save();
+};
 
 // Ensure virtual fields are serialized
 companySchema.set('toJSON', { virtuals: true });

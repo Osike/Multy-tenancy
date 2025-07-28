@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { api } from '../contexts/AuthContext';
+import api from '../contexts/AuthContext';
 import {
   PlusIcon,
   EyeIcon,
