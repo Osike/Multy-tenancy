@@ -13,12 +13,11 @@ const initializeDatabase = async () => {
     await mongoose.connect(process.env.MONGODB_URI);
     console.log('📡 Connected to MongoDB');
 
-    // Check if super admin already exists
-    const existingSuperAdmin = await User.findOne({ role: 'super_admin' });
-    if (existingSuperAdmin) {
-      console.log('⚠️  Super admin already exists. Skipping initialization.');
-      return;
-    }
+    // FORCE RESET: Clear existing data
+    console.log('🧹 Clearing existing data...');
+    await User.deleteMany({});
+    await Company.deleteMany({});
+    console.log('✅ Existing data cleared');
 
     // 1. Create Super Admin
     const hashedPassword = await bcrypt.hash('admin123', 12);
@@ -79,7 +78,7 @@ const initializeDatabase = async () => {
     await dispatcher.save();
     console.log('✅ Dispatcher created');
 
-    // 5. Create Driver
+    // 5. Create Driver (✅ FIXED: Added required driver information)
     const driver = new User({
       companyId: demoCompany._id,
       username: 'driver1',
@@ -89,7 +88,25 @@ const initializeDatabase = async () => {
       fullName: 'Mike Driver',
       phoneNumber: '+1234567893',
       licenseNumber: 'DL123456789',
-      isActive: true
+      isActive: true,
+      // ✅ ADDED: Required driver information
+      driverInfo: {
+        licenseClass: 'CDL-A',
+        licenseExpiryDate: new Date('2025-12-31'),
+        medicalCertExpiry: new Date('2025-06-30'),
+        emergencyContact: {
+          name: 'Jane Driver',
+          phone: '+1234567894',
+          relationship: 'Spouse'
+        },
+        address: {
+          street: '456 Driver Street',
+          city: 'Demo City',
+          state: 'DC',
+          zipCode: '12346',
+          country: 'USA'
+        }
+      }
     });
     await driver.save();
     console.log('✅ Driver created');
