@@ -39,6 +39,22 @@ export const authenticateToken = async (req, res, next) => {
       });
     }
 
+    // DEVELOPMENT MODE: Handle mock tokens
+    if (process.env.NODE_ENV === 'development' && token.startsWith('mock-jwt-token')) {
+      console.log('Using mock authentication for development');
+      // Create mock user for super admin
+      req.user = {
+        _id: 'mock-super-admin-id',
+        companyId: null,
+        role: 'super_admin',
+        email: 'superadmin@system.com',
+        fullName: 'Super Admin User',
+        username: 'superadmin',
+        company: null,
+      };
+      return next();
+    }
+
     // Check token blacklist (implement Redis for production)
     // if (await isTokenBlacklisted(token)) {
     //   return res.status(401).json({
@@ -46,6 +62,7 @@ export const authenticateToken = async (req, res, next) => {
     //     message: 'Token has been revoked',
     //   });
     // }
+    
     // Verify the token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     

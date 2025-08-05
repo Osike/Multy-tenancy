@@ -7,6 +7,13 @@ const tripSchema = new mongoose.Schema({
     required: true,
     index: true,
   },
+  tripId: {
+    type: String,
+    required: true,
+    trim: true,
+    maxlength: [50, 'Trip ID cannot exceed 50 characters'],
+    index: true
+  },
   truck: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Truck',
@@ -19,62 +26,69 @@ const tripSchema = new mongoose.Schema({
       message: 'Truck must belong to the same company'
     }
   },
-  rate: {
-    type: Number,
+  driver: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
     required: true,
-    min: [0, 'Rate must be positive'],
-    max: [1000000, 'Rate cannot exceed $1,000,000']
+    validate: {
+      validator: async function(driverId) {
+        const driver = await mongoose.model('User').findById(driverId);
+        return driver && 
+               driver.role === 'driver' && 
+               driver.companyId.toString() === this.companyId.toString();
+      },
+      message: 'Driver must be a driver role in the same company'
+    }
   },
-  fuelCostUsd: {
-    type: Number,
+  tripDate: {
+    type: Date,
     required: true,
-    min: [0, 'Fuel cost must be positive'],
-    max: [100000, 'Fuel cost cannot exceed $100,000']
+    default: Date.now
   },
-  fuelLiters: {
-    type: Number,
+  // Route Information
+  fromLocation: {
+    type: String,
     required: true,
-    min: [0, 'Fuel liters must be positive'],
-    max: [10000, 'Fuel liters cannot exceed 10,000L']
+    trim: true,
+    maxlength: [200, 'From location cannot exceed 200 characters']
   },
-  mileage: {
-    type: Number,
+  toLocation: {
+    type: String,
     required: true,
-    min: [0, 'Mileage must be positive'],
-    max: [50000, 'Mileage cannot exceed 50,000 miles']
+    trim: true,
+    maxlength: [200, 'To location cannot exceed 200 characters']
   },
-  driverSalary: {
-    type: Number,
-    required: true,
-    min: [0, 'Driver salary must be positive'],
-    max: [50000, 'Driver salary cannot exceed $50,000']
-  },
-  maintenanceCost: {
-    type: Number,
-    required: true,
-    min: [0, 'Maintenance cost must be positive'],
-    max: [100000, 'Maintenance cost cannot exceed $100,000']
-  },
-  roadTolls: {
-    type: Number,
-    required: true,
-    min: [0, 'Road tolls must be positive'],
-    max: [10000, 'Road tolls cannot exceed $10,000']
-  },
-  routeDetails: {
-    startLocation: {
+  // Cargo/Goods Information
+  cargoDetails: {
+    goodsType: {
       type: String,
       required: true,
       trim: true,
-      maxlength: [200, 'Start location cannot exceed 200 characters']
+      maxlength: [100, 'Goods type cannot exceed 100 characters']
     },
-    endLocation: {
-      type: String,
+    weight: {
+      type: Number,
       required: true,
-      trim: true,
-      maxlength: [200, 'End location cannot exceed 200 characters']
+      min: [0, 'Weight must be positive'],
+      max: [200000, 'Weight cannot exceed 200,000 lbs']
     },
+    weightUnit: {
+      type: String,
+      enum: ['lbs', 'kg', 'tons'],
+      default: 'lbs'
+    },
+    description: {
+      type: String,
+      trim: true,
+      maxlength: [500, 'Description cannot exceed 500 characters']
+    },
+    specialRequirements: [{
+      type: String,
+      trim: true,
+      maxlength: [100, 'Special requirement cannot exceed 100 characters']
+    }]
   },
+  // Customer/Company Information
   customer: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Customer',
@@ -87,58 +101,99 @@ const tripSchema = new mongoose.Schema({
       message: 'Customer must belong to the same company'
     }
   },
-  loadDetails: {
-    weight: {
-      type: Number,
-      required: true,
-      min: [0, 'Load weight must be positive'],
-      max: [200000, 'Load weight cannot exceed 200,000 lbs']
-    },
-    goodsType: {
+  // Revenue Section
+  rate: {
+    type: Number,
+    required: true,
+    min: [0, 'Rate must be positive'],
+    max: [1000000, 'Rate cannot exceed $1,000,000']
+  },
+  currency: {
+    type: String,
+    required: true,
+    enum: ['USD', 'EUR', 'GBP', 'CAD', 'AUD'],
+    default: 'USD'
+  },
+  // Trip Expenses Section
+  fuelCost: {
+    type: Number,
+    required: true,
+    min: [0, 'Fuel cost must be positive'],
+    max: [100000, 'Fuel cost cannot exceed $100,000'],
+    default: 0
+  },
+  mileageCost: {
+    type: Number,
+    required: true,
+    min: [0, 'Mileage cost must be positive'],
+    max: [50000, 'Mileage cost cannot exceed $50,000'],
+    default: 0
+  },
+  driverSalary: {
+    type: Number,
+    required: true,
+    min: [0, 'Driver salary must be positive'],
+    max: [50000, 'Driver salary cannot exceed $50,000'],
+    default: 0
+  },
+  roadTolls: {
+    type: Number,
+    required: true,
+    min: [0, 'Road tolls must be positive'],
+    max: [10000, 'Road tolls cannot exceed $10,000'],
+    default: 0
+  },
+  // Maintenance Expenses (Dynamic Items)
+  maintenanceExpenses: [{
+    itemService: {
       type: String,
       required: true,
       trim: true,
-      maxlength: [100, 'Goods type cannot exceed 100 characters']
+      maxlength: [100, 'Item/Service cannot exceed 100 characters']
     },
-  },
-  tripStartDate: {
-    type: Date,
-    required: true,
-    validate: {
-      validator: function(date) {
-        return date <= new Date();
-      },
-      message: 'Trip start date cannot be in the future'
+    cost: {
+      type: Number,
+      required: true,
+      min: [0, 'Cost must be positive'],
+      max: [50000, 'Cost cannot exceed $50,000']
+    },
+    serviceProvider: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: [100, 'Service provider cannot exceed 100 characters']
+    },
+    date: {
+      type: Date,
+      required: true
+    },
+    notes: {
+      type: String,
+      trim: true,
+      maxlength: [500, 'Notes cannot exceed 500 characters']
     }
-  },
-  tripEndDate: {
-    type: Date,
-    required: true,
-    validate: {
-      validator: function(date) {
-        return date > this.tripStartDate && date <= new Date();
-      },
-      message: 'Trip end date must be after start date and not in the future',
-    },
-  },
+  }],
+  // Comments & Attachments
   comments: {
     type: String,
     trim: true,
-    maxlength: [1000, 'Comments cannot exceed 1000 characters']
+    maxlength: [2000, 'Comments cannot exceed 2000 characters']
   },
   attachments: [{
     fileName: {
       type: String,
+      required: true,
       maxlength: [255, 'File name cannot exceed 255 characters']
     },
     filePath: {
       type: String,
+      required: true,
       maxlength: [500, 'File path cannot exceed 500 characters']
     },
     fileType: {
       type: String,
-      enum: ['image/jpeg', 'image/png', 'application/pdf'],
-      message: 'File type must be JPEG, PNG, or PDF'
+      enum: ['image/jpeg', 'image/png', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+      message: 'File type must be JPEG, PNG, PDF, or Word document'
     },
     fileSize: {
       type: Number,
@@ -149,45 +204,29 @@ const tripSchema = new mongoose.Schema({
       default: Date.now
     }
   }],
+  // Status & Tracking
   status: {
     type: String,
-    enum: ['Pending', 'Assigned', 'In Transit', 'Delivered', 'Cancelled'],
-    default: 'Pending',
+    enum: ['Scheduled', 'In Progress', 'Completed', 'Cancelled'],
+    default: 'Scheduled',
     index: true
   },
-  assignedDriver: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    validate: {
-      validator: async function(driverId) {
-        if (!driverId) return true; // Optional field
-        const driver = await mongoose.model('User').findById(driverId);
-        return driver && 
-               driver.role === 'driver' && 
-               driver.companyId.toString() === this.companyId.toString();
-      },
-      message: 'Assigned driver must be a driver role in the same company'
-    }
-  },
+  // Auto-calculated fields
   totalExpenses: {
     type: Number,
     default: 0,
     min: [0, 'Total expenses cannot be negative']
   },
+  totalMaintenanceExpenses: {
+    type: Number,
+    default: 0,
+    min: [0, 'Total maintenance expenses cannot be negative']
+  },
   netProfit: {
     type: Number,
-    default: 0,
+    default: 0
   },
-  fuelEfficiency: {
-    type: Number,
-    default: 0,
-    min: [0, 'Fuel efficiency cannot be negative']
-  },
-  tripDurationHours: {
-    type: Number,
-    default: 0,
-    min: [0, 'Trip duration cannot be negative']
-  },
+  // Record keeping
   recordedBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
@@ -205,36 +244,34 @@ const tripSchema = new mongoose.Schema({
 });
 
 // Compound indexes for better query performance
-tripSchema.index({ companyId: 1, tripStartDate: -1 });
+tripSchema.index({ companyId: 1, tripDate: -1 });
 tripSchema.index({ companyId: 1, truck: 1 });
-tripSchema.index({ companyId: 1, customer: 1 });
+tripSchema.index({ companyId: 1, driver: 1 });
 tripSchema.index({ companyId: 1, status: 1 });
-tripSchema.index({ companyId: 1, assignedDriver: 1 });
+tripSchema.index({ companyId: 1, tripId: 1 });
 tripSchema.index({ companyId: 1, createdAt: -1 });
 
 // Pre-save middleware to calculate derived fields
 tripSchema.pre('save', function(next) {
   try {
-    // Calculate total expenses
-    this.totalExpenses = this.fuelCostUsd + this.driverSalary + this.maintenanceCost + this.roadTolls;
+    // Calculate total maintenance expenses
+    this.totalMaintenanceExpenses = this.maintenanceExpenses.reduce((total, item) => {
+      return total + (item.cost || 0);
+    }, 0);
     
-    // Calculate net profit
-    this.netProfit = this.rate - this.totalExpenses;
+    // Calculate total trip expenses (excluding maintenance)
+    this.totalExpenses = (this.fuelCost || 0) + 
+                        (this.mileageCost || 0) + 
+                        (this.driverSalary || 0) + 
+                        (this.roadTolls || 0);
     
-    // Calculate fuel efficiency (liters per mile)
-    this.fuelEfficiency = this.mileage > 0 ? this.fuelLiters / this.mileage : 0;
-    
-    // Calculate trip duration in hours
-    if (this.tripStartDate && this.tripEndDate) {
-      const durationMs = this.tripEndDate.getTime() - this.tripStartDate.getTime();
-      this.tripDurationHours = durationMs / (1000 * 60 * 60);
-    }
+    // Calculate net profit (rate - all expenses including maintenance)
+    this.netProfit = (this.rate || 0) - this.totalExpenses - this.totalMaintenanceExpenses;
     
     // Round calculated values to 2 decimal places
     this.totalExpenses = Math.round(this.totalExpenses * 100) / 100;
+    this.totalMaintenanceExpenses = Math.round(this.totalMaintenanceExpenses * 100) / 100;
     this.netProfit = Math.round(this.netProfit * 100) / 100;
-    this.fuelEfficiency = Math.round(this.fuelEfficiency * 100) / 100;
-    this.tripDurationHours = Math.round(this.tripDurationHours * 100) / 100;
     
     next();
   } catch (error) {
@@ -247,9 +284,9 @@ tripSchema.statics.getCompanyStats = function(companyId, startDate, endDate) {
   const matchStage = { companyId: new mongoose.Types.ObjectId(companyId) };
   
   if (startDate || endDate) {
-    matchStage.tripStartDate = {};
-    if (startDate) matchStage.tripStartDate.$gte = new Date(startDate);
-    if (endDate) matchStage.tripStartDate.$lte = new Date(endDate);
+    matchStage.tripDate = {};
+    if (startDate) matchStage.tripDate.$gte = new Date(startDate);
+    if (endDate) matchStage.tripDate.$lte = new Date(endDate);
   }
   
   return this.aggregate([
@@ -259,16 +296,23 @@ tripSchema.statics.getCompanyStats = function(companyId, startDate, endDate) {
         _id: null,
         totalTrips: { $sum: 1 },
         totalRevenue: { $sum: '$rate' },
-        totalExpenses: { $sum: '$totalExpenses' },
+        totalExpenses: { $sum: { $add: ['$totalExpenses', '$totalMaintenanceExpenses'] } },
         totalProfit: { $sum: '$netProfit' },
-        avgFuelEfficiency: { $avg: '$fuelEfficiency' },
-        avgTripDuration: { $avg: '$tripDurationHours' },
-        totalMileage: { $sum: '$mileage' },
-        totalFuelUsed: { $sum: '$fuelLiters' }
+        avgProfit: { $avg: '$netProfit' },
+        completedTrips: {
+          $sum: {
+            $cond: [{ $eq: ['$status', 'Completed'] }, 1, 0]
+          }
+        }
       }
     }
   ]);
 };
+
+// Virtual for total all expenses (trip + maintenance)
+tripSchema.virtual('totalAllExpenses').get(function() {
+  return this.totalExpenses + this.totalMaintenanceExpenses;
+});
 
 // Virtual for profit margin percentage
 tripSchema.virtual('profitMargin').get(function() {

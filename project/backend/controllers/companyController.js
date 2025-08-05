@@ -25,8 +25,6 @@ export const getCompanies = async (req, res) => {
     }
 
     const companies = await Company.find(query)
-      .populate('userCount')
-      .populate('truckCount')
       .skip(skip)
       .limit(limit)
       .sort({ createdAt: -1 });
@@ -60,9 +58,7 @@ export const getCompanies = async (req, res) => {
 // @access  Private/Super Admin
 export const getCompany = async (req, res) => {
   try {
-    const company = await Company.findById(req.params.id)
-      .populate('userCount')
-      .populate('truckCount');
+    const company = await Company.findById(req.params.id);
 
     if (!company) {
       return res.status(404).json({
@@ -102,25 +98,42 @@ export const createCompany = async (req, res) => {
 
     const {
       companyName,
+      businessRegistrationNumber,
+      taxId,
       contactEmail,
+      contactPhone,
       address,
-      phoneNumber,
-      registrationNumber,
-      subscriptionPlan,
-      maxUsers,
-      maxTrucks,
+      industry,
+      companySize,
+      website,
+      subscription
     } = req.body;
 
-    // Create company
+    // Create company with proper schema fields
     const company = await Company.create({
       companyName,
+      businessRegistrationNumber,
+      taxId,
       contactEmail,
-      address,
-      phoneNumber,
-      registrationNumber,
-      subscriptionPlan: subscriptionPlan || 'Basic',
-      maxUsers: maxUsers || 10,
-      maxTrucks: maxTrucks || 50,
+      contactPhone,
+      address: {
+        street: address?.street || '',
+        city: address?.city || '',
+        state: address?.state || '',
+        zipCode: address?.zipCode || '',
+        country: address?.country || 'USA'
+      },
+      industry: industry || 'Logistics',
+      companySize: companySize || 'Small (1-10)',
+      website,
+      subscription: {
+        plan: subscription?.plan || 'Basic',
+        status: subscription?.status || 'Trial',
+        startDate: new Date(),
+        endDate: subscription?.endDate ? new Date(subscription.endDate) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days trial
+        maxUsers: subscription?.maxUsers || 10,
+        maxTrucks: subscription?.maxTrucks || 50
+      }
     });
 
     res.status(201).json({

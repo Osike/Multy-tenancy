@@ -39,7 +39,8 @@ const companySchema = new mongoose.Schema({
     trim: true,
     validate: {
       validator: function(phone) {
-        return /^[\+]?[1-9][\d]{0,15}$/.test(phone.replace(/[\s\-\(\)]/g, ''));
+        // Allow +, digits, spaces, dashes, and parentheses
+        return /^[\+]?[\d\s\-\(\)]{10,20}$/.test(phone);
       },
       message: 'Please provide a valid phone number'
     },

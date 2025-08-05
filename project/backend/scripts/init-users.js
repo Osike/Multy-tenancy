@@ -13,22 +13,23 @@ const initializeDatabase = async () => {
     await mongoose.connect(process.env.MONGODB_URI);
     console.log('📡 Connected to MongoDB');
 
-    // FORCE RESET: Clear existing data
+    // Clear existing data
     console.log('🧹 Clearing existing data...');
     await User.deleteMany({});
     await Company.deleteMany({});
     console.log('✅ Existing data cleared');
 
-    // 1. Create Super Admin
-    const hashedPassword = await bcrypt.hash('admin123', 12);
-    
+    // Hash password for all test users
+    const hashedPassword = await bcrypt.hash('password123', 12);
+
+    // 1. Create Super Admin (no company association)
     const superAdmin = new User({
       username: 'superadmin',
-      email: 'admin@tdms.com',
+      email: 'superadmin@logistics.com',
       password: hashedPassword,
       role: 'super_admin',
-      fullName: 'System Administrator',
-      phoneNumber: '+1234567890',
+      fullName: 'Super Administrator',
+      phoneNumber: '+1234567888',
       isActive: true
     });
     await superAdmin.save();
@@ -36,16 +37,29 @@ const initializeDatabase = async () => {
 
     // 2. Create Demo Company
     const demoCompany = new Company({
-      companyName: 'Demo Logistics Co.',
+      companyName: 'Demo Logistics Company',
+      businessRegistrationNumber: 'DLC-2024-001',
+      taxId: 'TX123456789',
       contactEmail: 'contact@demologistics.com',
-      address: '123 Business Street, Demo City, DC 12345',
-      phoneNumber: '+1234567890',
-      registrationNumber: 'DLC-2024-001',
-      status: 'Active',
-      subscriptionPlan: 'Premium',
-      maxUsers: 50,
-      maxTrucks: 100,
-      features: ['trip_management', 'analytics', 'customer_management']
+      contactPhone: '+1234567890',
+      address: {
+        street: '123 Business Street',
+        city: 'Demo City',
+        state: 'DC',
+        zipCode: '12345',
+        country: 'USA'
+      },
+      industry: 'Logistics',
+      companySize: 'Medium (11-50)',
+      website: 'https://demologistics.com',
+      subscription: {
+        plan: 'Professional',
+        status: 'Active',
+        startDate: new Date(),
+        endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year from now
+        maxUsers: 50,
+        maxTrucks: 100
+      }
     });
     await demoCompany.save();
     console.log('✅ Demo Company created');
@@ -78,7 +92,7 @@ const initializeDatabase = async () => {
     await dispatcher.save();
     console.log('✅ Dispatcher created');
 
-    // 5. Create Driver (✅ FIXED: Added required driver information)
+    // 5. Create Driver
     const driver = new User({
       companyId: demoCompany._id,
       username: 'driver1',
@@ -89,7 +103,6 @@ const initializeDatabase = async () => {
       phoneNumber: '+1234567893',
       licenseNumber: 'DL123456789',
       isActive: true,
-      // ✅ ADDED: Required driver information
       driverInfo: {
         licenseClass: 'CDL-A',
         licenseExpiryDate: new Date('2025-12-31'),
@@ -98,13 +111,6 @@ const initializeDatabase = async () => {
           name: 'Jane Driver',
           phone: '+1234567894',
           relationship: 'Spouse'
-        },
-        address: {
-          street: '456 Driver Street',
-          city: 'Demo City',
-          state: 'DC',
-          zipCode: '12346',
-          country: 'USA'
         }
       }
     });
@@ -112,19 +118,18 @@ const initializeDatabase = async () => {
     console.log('✅ Driver created');
 
     console.log('\n🎉 Database initialization completed successfully!');
-    console.log('\n🔑 Login Credentials:');
-    console.log('   Super Admin: admin@tdms.com / admin123');
-    console.log('   Company Admin: admin@demologistics.com / admin123');
-    console.log('   Dispatcher: dispatcher@demologistics.com / admin123');
-    console.log('   Driver: driver@demologistics.com / admin123');
-    console.log('\n⚡ You can now start your application and log in!');
+    console.log('\n📋 Test Login Credentials:');
+    console.log('Super Admin: superadmin / password123');
+    console.log('Company Admin: companyadmin / password123');
+    console.log('Dispatcher: dispatcher1 / password123');
+    console.log('Driver: driver1 / password123');
 
   } catch (error) {
     console.error('❌ Error initializing database:', error);
   } finally {
+    // Disconnect from MongoDB
     await mongoose.disconnect();
     console.log('📡 Disconnected from MongoDB');
-    process.exit(0);
   }
 };
 

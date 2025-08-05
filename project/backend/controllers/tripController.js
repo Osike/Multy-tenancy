@@ -10,7 +10,7 @@ const buildTripFilters = (req) => {
   
   // Role-based filtering
   if (req.user.role === 'driver') {
-    filters.assignedDriver = req.user._id;
+    filters.driver = req.user._id;
   }
   
   // Query parameter filters
@@ -18,26 +18,26 @@ const buildTripFilters = (req) => {
     filters.truck = req.query.truck;
   }
   
-  if (req.query.customer) {
-    filters.customer = req.query.customer;
+  if (req.query.driver) {
+    filters.driver = req.query.driver;
   }
   
   if (req.query.status) {
     filters.status = req.query.status;
   }
   
-  if (req.query.assignedDriver) {
-    filters.assignedDriver = req.query.assignedDriver;
+  if (req.query.tripId) {
+    filters.tripId = new RegExp(req.query.tripId, 'i'); // Case-insensitive search
   }
   
   // Date range filtering
   if (req.query.startDate || req.query.endDate) {
-    filters.tripStartDate = {};
+    filters.tripDate = {};
     if (req.query.startDate) {
-      filters.tripStartDate.$gte = new Date(req.query.startDate);
+      filters.tripDate.$gte = new Date(req.query.startDate);
     }
     if (req.query.endDate) {
-      filters.tripStartDate.$lte = new Date(req.query.endDate);
+      filters.tripDate.$lte = new Date(req.query.endDate);
     }
   }
   
@@ -66,9 +66,8 @@ export const getTrips = async (req, res) => {
     }
 
     const trips = await Trip.find(filters)
-      .populate('truck', 'truckIdCode make model licensePlate')
-      .populate('customer', 'customerName contactPerson')
-      .populate('assignedDriver', 'fullName username')
+      .populate('truck', 'plateNumber model year capacity status')
+      .populate('driver', 'fullName username email phoneNumber')
       .populate('recordedBy', 'fullName username')
       .skip(skip)
       .limit(limit)
@@ -84,10 +83,25 @@ export const getTrips = async (req, res) => {
         $group: {
           _id: null,
           totalRevenue: { $sum: '$rate' },
-          totalExpenses: { $sum: '$totalExpenses' },
+          totalTripExpenses: { $sum: '$totalExpenses' },
+          totalMaintenanceExpenses: { $sum: '$totalMaintenanceExpenses' },
           totalProfit: { $sum: '$netProfit' },
-          avgFuelEfficiency: { $avg: '$fuelEfficiency' },
-          totalMileage: { $sum: '$mileage' },
+          avgProfit: { $avg: '$netProfit' },
+          completedTrips: {
+            $sum: {
+              $cond: [{ $eq: ['$status', 'Completed'] }, 1, 0]
+            }
+          },
+          scheduledTrips: {
+            $sum: {
+              $cond: [{ $eq: ['$status', 'Scheduled'] }, 1, 0]
+            }
+          },
+          inProgressTrips: {
+            $sum: {
+              $cond: [{ $eq: ['$status', 'In Progress'] }, 1, 0]
+            }
+          }
         }
       }
     ]);
@@ -98,10 +112,13 @@ export const getTrips = async (req, res) => {
         trips,
         summary: stats[0] || {
           totalRevenue: 0,
-          totalExpenses: 0,
+          totalTripExpenses: 0,
+          totalMaintenanceExpenses: 0,
           totalProfit: 0,
-          avgFuelEfficiency: 0,
-          totalMileage: 0,
+          avgProfit: 0,
+          completedTrips: 0,
+          scheduledTrips: 0,
+          inProgressTrips: 0
         },
         pagination: {
           page,

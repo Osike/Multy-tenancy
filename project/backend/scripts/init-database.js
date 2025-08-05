@@ -65,7 +65,9 @@ db.users.insertOne({
 });
 
 // 6. Create sample driver
+const driverId = new ObjectId();
 db.users.insertOne({
+  _id: driverId,
   companyId: companyId,
   username: "driver1",
   email: "driver@demologistics.com",
@@ -113,31 +115,54 @@ db.customers.insertOne({
   updatedAt: new Date()
 });
 
-// 9. Create sample trip
+// 9. Create sample trip with new structure
 db.trips.insertOne({
   companyId: companyId,
-  tripId: "TRIP-001",
-  customer: customerId,
+  tripId: "TRP-001",
   truck: truckId,
-  pickupLocation: {
-    address: "123 Pickup Street, Start City, SC 11111",
-    coordinates: { latitude: 40.7128, longitude: -74.0060 }
-  },
-  deliveryLocation: {
-    address: "789 Delivery Ave, End City, EC 22222",
-    coordinates: { latitude: 34.0522, longitude: -118.2437 }
-  },
-  pickupDate: new Date(Date.now() + 24 * 60 * 60 * 1000), // Tomorrow
-  deliveryDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3 days from now
-  distance: 500,
-  rate: 2500.00,
-  fuelCostUsd: 400.00,
-  status: "Scheduled",
+  driver: driverId,
+  tripDate: new Date(),
+  fromLocation: "Mombasa Port, Kenya",
+  toLocation: "Nairobi CBD, Kenya",
+  // Cargo/Goods Information
   cargoDetails: {
-    description: "Electronics Components",
+    goodsType: "Electronics Components",
     weight: 15000,
-    specialRequirements: ["Fragile", "Temperature Controlled"]
+    weightUnit: "lbs",
+    description: "High-value electronic components for manufacturing",
+    specialRequirements: ["Fragile", "Temperature Controlled", "Secure Transport"]
   },
+  customer: customerId,
+  // Revenue Section
+  rate: 2500.00,
+  currency: "USD",
+  // Trip Expenses
+  fuelCost: 400.00,
+  mileageCost: 150.00,
+  driverSalary: 300.00,
+  roadTolls: 50.00,
+  // Maintenance Expenses
+  maintenanceExpenses: [
+    {
+      itemService: "Oil Change",
+      cost: 75.00,
+      serviceProvider: "AutoShop XYZ",
+      date: new Date(),
+      notes: "Regular maintenance service"
+    },
+    {
+      itemService: "Tire Replacement",
+      cost: 200.00,
+      serviceProvider: "Tire Pro Service",
+      date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
+      notes: "Front tires replacement due to wear"
+    }
+  ],
+  // Comments & Attachments
+  comments: "Regular delivery route. Customer prefers morning delivery. Handle with care - fragile electronics.",
+  attachments: [],
+  status: "Scheduled",
+  recordedBy: new ObjectId("507f1f77bcf86cd799439011"), // Will be updated with actual dispatcher ID
   createdAt: new Date(),
   updatedAt: new Date()
 });
