@@ -252,7 +252,7 @@ function Layout({ children }: LayoutProps) {
                   </h3>
                   <div className="mt-2 text-sm text-yellow-700 dark:text-yellow-300">
                     <p>
-                      Your company account is currently {user.companyId.status.toLowerCase()}. 
+                      Your company account is currently {user?.companyId?.status?.toLowerCase() || 'active'}.  
                       Some features may be limited. Please contact your administrator.
                     </p>
                   </div>

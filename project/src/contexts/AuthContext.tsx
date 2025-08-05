@@ -39,22 +39,28 @@ api.interceptors.response.use(
   },
   (error) => {
     console.error('API error:', error.response?.status, error.response?.data);
-    if (error.response?.status === 401) {
-      // Token is invalid or expired
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
-    }
+    // Comment out auto-redirect for now to avoid login issues
+    // if (error.response?.status === 401) {
+    //   localStorage.removeItem('token');
+    //   localStorage.removeItem('user');
+    //   window.location.href = '/login';
+    // }
     return Promise.reject(error);
   }
 );
 
 interface User {
-  id: string;
+   id: string;
+  _id: string;
   name: string;
+  fullName?: string; // Add this
   email: string;
-  role: string;
-  companyId?: string;
+  role: 'super_admin' | 'company_admin' | 'dispatcher' | 'driver';
+  companyId?: {
+    _id: string;
+    companyName: string;
+    status: string;
+  } | string; // Can be either object or string
   companyName?: string;
 }
 
@@ -78,40 +84,90 @@ export const useAuth = () => {
 };
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  // MOCK USER - Comment this section out when you want real authentication
+  const mockToken = 'mock-jwt-token-super-admin';
+  localStorage.setItem('token', mockToken);
+  
+  const mockUser = {
+    id: 'super-user-123',
+    _id: 'super-user-123',
+    name: 'Super Admin User',
+    fullName: 'Super Admin User', // Add fullName for Layout.tsx
+    email: 'superadmin@system.com',
+    role: 'super_admin' as const,
+    companyId: {
+      _id: 'system-company',
+      companyName: 'System Administration',
+      status: 'Active'
+    }
+  };
+  
+  localStorage.setItem('user', JSON.stringify(mockUser));
+  const [user, setUser] = useState<User | null>(mockUser);
+  const [loading, setLoading] = useState(false); // Set to false to skip loading
+  
+  // REAL USER STATE - Uncomment when you want real authentication
+  // const [user, setUser] = useState<User | null>(null);
+  // const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is logged in on app start
-    const token = localStorage.getItem('token');
-    const savedUser = localStorage.getItem('user');
-    
-    if (token && savedUser) {
-      try {
-        setUser(JSON.parse(savedUser));
-      } catch (error) {
-        console.error('Error parsing saved user:', error);
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-      }
-    }
+    // SKIP AUTH CHECK - Comment this out when using mock user
     setLoading(false);
+    
+    // REAL AUTH CHECK - Uncomment when you want real authentication
+    // const token = localStorage.getItem('token');
+    // const savedUser = localStorage.getItem('user');
+    
+    // if (token && savedUser) {
+    //   try {
+    //     setUser(JSON.parse(savedUser));
+    //   } catch (error) {
+    //     console.error('Error parsing saved user:', error);
+    //     localStorage.removeItem('token');
+    //     localStorage.removeItem('user');
+    //   }
+    // }
+    // setLoading(false);
   }, []);
 
   const login = async (email: string, password: string): Promise<void> => {
     try {
       setLoading(true);
-      const response = await api.post('/auth/login', { email, password });
       
-      if (response.data.success) {
-        const { token, user: userData } = response.data.data;
+      // MOCK LOGIN - Comment this out when you want real authentication
+      console.log('Mock login for:', email);
+      
+      // Generate a mock token and store it
+      const mockToken = 'mock-jwt-token-' + Date.now();
+      localStorage.setItem('token', mockToken);
+      
+      const mockUser = {
+        id: 'mock-user-123',
+        _id: 'mock-user-123',
+        name: 'Mock Admin User',
+        email: email,
+        role: 'super_admin' as const, // Change to super_admin for company management
+        companyId: 'mock-company-123',
+        companyName: 'Mock Company'
+      };
+      
+      localStorage.setItem('user', JSON.stringify(mockUser));
+      setUser(mockUser);
+      setLoading(false);
+      return;
+      
+      // REAL LOGIN - Uncomment when you want real authentication
+      // const response = await api.post('/auth/login', { email, password });
+      
+      // if (response.data.success) {
+      //   const { token, user: userData } = response.data.data;
         
-        localStorage.setItem('token', token);
-        localStorage.setItem('user', JSON.stringify(userData));
-        setUser(userData);
-      } else {
-        throw new Error(response.data.message || 'Login failed');
-      }
+      //   localStorage.setItem('token', token);
+      //   localStorage.setItem('user', JSON.stringify(userData));
+      //   setUser(userData);
+      // } else {
+      //   throw new Error(response.data.message || 'Login failed');
+      // }
     } catch (error: any) {
       throw new Error(error.response?.data?.message || 'Login failed');
     } finally {
@@ -122,17 +178,33 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const register = async (userData: any): Promise<void> => {
     try {
       setLoading(true);
-      const response = await api.post('/auth/register', userData);
       
-      if (response.data.success) {
-        const { token, user: newUser } = response.data.data;
+      // MOCK REGISTER - Comment this out when you want real authentication
+      console.log('Mock register for:', userData.email);
+      setUser({
+        id: 'mock-user-123',
+        _id: 'mock-user-123',
+        name: userData.name || 'Mock User',
+        email: userData.email,
+        role: userData.role || 'company_admin',
+        companyId: 'mock-company-123',
+        companyName: 'Mock Company'
+      });
+      setLoading(false);
+      return;
+      
+      // REAL REGISTER - Uncomment when you want real authentication
+      // const response = await api.post('/auth/register', userData);
+      
+      // if (response.data.success) {
+      //   const { token, user: newUser } = response.data.data;
         
-        localStorage.setItem('token', token);
-        localStorage.setItem('user', JSON.stringify(newUser));
-        setUser(newUser);
-      } else {
-        throw new Error(response.data.message || 'Registration failed');
-      }
+      //   localStorage.setItem('token', token);
+      //   localStorage.setItem('user', JSON.stringify(newUser));
+      //   setUser(newUser);
+      // } else {
+      //   throw new Error(response.data.message || 'Registration failed');
+      // }
     } catch (error: any) {
       throw new Error(error.response?.data?.message || 'Registration failed');
     } finally {
