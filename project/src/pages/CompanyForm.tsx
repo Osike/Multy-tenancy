@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import api from '../contexts/AuthContext'; // Change this line - remove the curly braces
+import api from '../contexts/AuthContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 
 interface CompanyFormData {

@@ -1,67 +1,22 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import axios from 'axios';
-
-// Create API instance with fallback for undefined process.env
-const API_BASE_URL = (typeof process !== 'undefined' && process.env?.REACT_APP_API_URL) 
-  ? process.env.REACT_APP_API_URL 
-  : 'http://localhost:5000/api';
-
-console.log('API Base URL:', API_BASE_URL); // Debug log
-
-const api = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// Add request interceptor to include auth token
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token');
-    console.log('Making API request:', { url: config.url, hasToken: !!token }); // Debug log
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    console.error('Request error:', error);
-    return Promise.reject(error);
-  }
-);
-
-// Add response interceptor to handle errors
-api.interceptors.response.use(
-  (response) => {
-    console.log('API response:', { url: response.config.url, status: response.status }); // Debug log
-    return response;
-  },
-  (error) => {
-    console.error('API error:', error.response?.status, error.response?.data);
-    // Comment out auto-redirect for now to avoid login issues
-    // if (error.response?.status === 401) {
-    //   localStorage.removeItem('token');
-    //   localStorage.removeItem('user');
-    //   window.location.href = '/login';
-    // }
-    return Promise.reject(error);
-  }
-);
+import api from '../utils/api';
 
 interface User {
-   id: string;
+  id: string;
   _id: string;
   name: string;
-  fullName?: string; // Add this
+  fullName?: string;
   email: string;
+  username: string;
   role: 'super_admin' | 'company_admin' | 'dispatcher' | 'driver';
   companyId?: {
     _id: string;
     companyName: string;
     status: string;
-  } | string; // Can be either object or string
-  companyName?: string;
+  } | string;
+  isActive: boolean;
+  phoneNumber?: string;
+  licenseNumber?: string;
 }
 
 interface AuthContextType {
@@ -84,129 +39,113 @@ export const useAuth = () => {
 };
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  // MOCK USER - Comment this section out when you want real authentication
-  const mockToken = 'mock-jwt-token-super-admin';
-  localStorage.setItem('token', mockToken);
-  
-  const mockUser = {
-    id: 'super-user-123',
-    _id: 'super-user-123',
-    name: 'Super Admin User',
-    fullName: 'Super Admin User', // Add fullName for Layout.tsx
-    email: 'superadmin@system.com',
-    role: 'super_admin' as const,
-    companyId: {
-      _id: 'system-company',
-      companyName: 'System Administration',
-      status: 'Active'
-    }
-  };
-  
-  localStorage.setItem('user', JSON.stringify(mockUser));
-  const [user, setUser] = useState<User | null>(mockUser);
-  const [loading, setLoading] = useState(false); // Set to false to skip loading
-  
-  // REAL USER STATE - Uncomment when you want real authentication
-  // const [user, setUser] = useState<User | null>(null);
-  // const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // SKIP AUTH CHECK - Comment this out when using mock user
-    setLoading(false);
-    
-    // REAL AUTH CHECK - Uncomment when you want real authentication
-    // const token = localStorage.getItem('token');
-    // const savedUser = localStorage.getItem('user');
-    
-    // if (token && savedUser) {
-    //   try {
-    //     setUser(JSON.parse(savedUser));
-    //   } catch (error) {
-    //     console.error('Error parsing saved user:', error);
-    //     localStorage.removeItem('token');
-    //     localStorage.removeItem('user');
-    //   }
-    // }
-    // setLoading(false);
+    const initializeAuth = async () => {
+      const token = localStorage.getItem('token');
+      const savedUser = localStorage.getItem('user');
+      
+      if (token && savedUser) {
+        try {
+          // Parse saved user
+          const parsedUser = JSON.parse(savedUser);
+          setUser(parsedUser);
+          
+          // Verify token with backend
+          const response = await api.get('/auth/me');
+          if (response.data.success) {
+            const { user: freshUser } = response.data.data;
+            // Update user data with fresh data from server
+            localStorage.setItem('user', JSON.stringify(freshUser));
+            setUser(freshUser);
+          }
+        } catch (error) {
+          console.error('Auth initialization error:', error);
+          // Clear invalid token/user data
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          setUser(null);
+        }
+      }
+      setLoading(false);
+    };
+
+    initializeAuth();
   }, []);
 
   const login = async (email: string, password: string): Promise<void> => {
     try {
       setLoading(true);
       
-      // MOCK LOGIN - Comment this out when you want real authentication
-      console.log('Mock login for:', email);
+      const response = await api.post('/auth/login', { email, password });
       
-      // Generate a mock token and store it
-      const mockToken = 'mock-jwt-token-' + Date.now();
-      localStorage.setItem('token', mockToken);
-      
-      const mockUser = {
-        id: 'mock-user-123',
-        _id: 'mock-user-123',
-        name: 'Mock Admin User',
-        email: email,
-        role: 'super_admin' as const, // Change to super_admin for company management
-        companyId: 'mock-company-123',
-        companyName: 'Mock Company'
-      };
-      
-      localStorage.setItem('user', JSON.stringify(mockUser));
-      setUser(mockUser);
-      setLoading(false);
-      return;
-      
-      // REAL LOGIN - Uncomment when you want real authentication
-      // const response = await api.post('/auth/login', { email, password });
-      
-      // if (response.data.success) {
-      //   const { token, user: userData } = response.data.data;
+      if (response.data.success) {
+        const { token, user: userData } = response.data.data;
         
-      //   localStorage.setItem('token', token);
-      //   localStorage.setItem('user', JSON.stringify(userData));
-      //   setUser(userData);
-      // } else {
-      //   throw new Error(response.data.message || 'Login failed');
-      // }
+        localStorage.setItem('token', token);
+        localStorage.setItem('user', JSON.stringify(userData));
+        setUser(userData);
+      } else {
+        throw new Error(response.data.message || 'Login failed');
+      }
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Login failed');
+      const errorMessage = error.response?.data?.message || error.message || 'Login failed';
+      throw new Error(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
-  const register = async (userData: any): Promise<void> => {
+  const register = async (userData: {
+    username: string;
+    email: string;
+    password: string;
+    role: string;
+    fullName: string;
+    phoneNumber?: string;
+    companyId?: string;
+    licenseNumber?: string;
+    companyName?: string;
+    contactEmail?: string;
+  }): Promise<void> => {
     try {
       setLoading(true);
       
-      // MOCK REGISTER - Comment this out when you want real authentication
-      console.log('Mock register for:', userData.email);
-      setUser({
-        id: 'mock-user-123',
-        _id: 'mock-user-123',
-        name: userData.name || 'Mock User',
-        email: userData.email,
-        role: userData.role || 'company_admin',
-        companyId: 'mock-company-123',
-        companyName: 'Mock Company'
-      });
-      setLoading(false);
-      return;
+      // For company_admin registration, we need to create a company first if companyName is provided
+      let finalUserData = { ...userData };
       
-      // REAL REGISTER - Uncomment when you want real authentication
-      // const response = await api.post('/auth/register', userData);
-      
-      // if (response.data.success) {
-      //   const { token, user: newUser } = response.data.data;
+      if (userData.role === 'company_admin' && userData.companyName && !userData.companyId) {
+        // Create company first
+        const companyResponse = await api.post('/companies', {
+          companyName: userData.companyName,
+          contactEmail: userData.contactEmail || userData.email,
+          status: 'Active'
+        });
         
-      //   localStorage.setItem('token', token);
-      //   localStorage.setItem('user', JSON.stringify(newUser));
-      //   setUser(newUser);
-      // } else {
-      //   throw new Error(response.data.message || 'Registration failed');
-      // }
+        if (companyResponse.data.success) {
+          finalUserData.companyId = companyResponse.data.data._id;
+        }
+      }
+      
+      // Remove company-specific fields that aren't part of user registration
+      const { companyName, contactEmail, ...userRegistrationData } = finalUserData;
+      
+      const response = await api.post('/auth/register', userRegistrationData);
+      
+      if (response.data.success) {
+        const { token, user: newUser } = response.data.data;
+        
+        localStorage.setItem('token', token);
+        localStorage.setItem('user', JSON.stringify(newUser));
+        setUser(newUser);
+      } else {
+        throw new Error(response.data.message || 'Registration failed');
+      }
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Registration failed');
+      const errorMessage = error.response?.data?.message || error.message || 'Registration failed';
+      throw new Error(errorMessage);
     } finally {
       setLoading(false);
     }

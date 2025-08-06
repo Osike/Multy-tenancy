@@ -187,18 +187,18 @@ function Layout({ children }: LayoutProps) {
               <div className="flex-shrink-0">
                 <div className="h-8 w-8 rounded-full bg-blue-600 dark:bg-blue-500 flex items-center justify-center">
                   <span className="text-sm font-medium text-white">
-                    {user?.fullName?.charAt(0) || 'U'}
+                    {(user?.fullName || user?.name)?.charAt(0) || 'U'}
                   </span>
                 </div>
               </div>
               <div className="ml-3 min-w-0 flex-1">
                 <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                  {user?.fullName}
+                  {user?.fullName || user?.name}
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
                   {user?.role.replace('_', ' ')}
                 </p>
-                {user?.companyId && (
+                {user?.companyId && typeof user.companyId === 'object' && (
                   <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
                     {user.companyId.companyName}
                   </p>
@@ -243,7 +243,7 @@ function Layout({ children }: LayoutProps) {
       <div className="pl-64">
         <main className="py-8 px-8">
           {/* Error banner */}
-          {user?.companyId?.status !== 'Active' && user?.role !== 'super_admin' && (
+          {user?.companyId && typeof user.companyId === 'object' && user.companyId.status !== 'Active' && user?.role !== 'super_admin' && (
             <div className="mb-6 rounded-md bg-yellow-50 dark:bg-yellow-900/50 p-4">
               <div className="flex">
                 <div className="ml-3">
@@ -252,7 +252,7 @@ function Layout({ children }: LayoutProps) {
                   </h3>
                   <div className="mt-2 text-sm text-yellow-700 dark:text-yellow-300">
                     <p>
-                      Your company account is currently {user?.companyId?.status?.toLowerCase() || 'active'}.  
+                      Your company account is currently {user?.companyId?.status?.toLowerCase() || 'inactive'}.  
                       Some features may be limited. Please contact your administrator.
                     </p>
                   </div>

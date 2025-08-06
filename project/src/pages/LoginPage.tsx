@@ -1,14 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { useTheme } from '../contexts/ThemeContext';
 import { EyeIcon, EyeSlashIcon, TruckIcon } from '@heroicons/react/24/outline';
 import LoadingSpinner from '../components/LoadingSpinner';
 
 function LoginPage() {
   const navigate = useNavigate();
-  const { login } = useAuth();
-  const { theme } = useTheme();
+  const { login, isAuthenticated, loading: authLoading } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -16,6 +14,14 @@ function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated && !authLoading) {
+      // Redirect to appropriate dashboard based on user role
+      navigate('/', { replace: true });
+    }
+  }, [isAuthenticated, authLoading, navigate]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -31,30 +37,32 @@ function LoginPage() {
     setLoading(true);
     setError('');
 
+    // Basic validation
+    if (!formData.email || !formData.password) {
+      setError('Please fill in all fields');
+      setLoading(false);
+      return;
+    }
+
     try {
       await login(formData.email, formData.password);
-      navigate('/dashboard');
+      // Navigation will be handled by the useEffect hook
     } catch (error: any) {
-      setError(error.response?.data?.message || 'Login failed. Please try again.');
+      console.error('Login error:', error);
+      setError(error.message || 'Login failed. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDemoLogin = async (email: string, password: string) => {
-    setFormData({ email, password });
-    setLoading(true);
-    setError('');
-
-    try {
-      await login(email, password);
-      navigate('/dashboard');
-    } catch (error: any) {
-      setError(error.response?.data?.message || 'Demo login failed.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Show loading spinner while checking authentication
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <LoadingSpinner size="lg" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
@@ -70,42 +78,6 @@ function LoginPage() {
           <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
             Truck Data Management System
           </p>
-        </div>
-
-        {/* Demo Credentials */}
-        <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
-          <h3 className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-3">
-            Demo Accounts
-          </h3>
-          <div className="grid grid-cols-1 gap-2">
-            <button
-              type="button"
-              onClick={() => handleDemoLogin('admin@tdms.com', 'password123')}
-              disabled={loading}
-              className="text-left px-3 py-2 text-xs bg-white dark:bg-gray-800 rounded border border-blue-200 dark:border-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/30 disabled:opacity-50"
-            >
-              <div className="font-medium text-blue-900 dark:text-blue-100">Super Admin</div>
-              <div className="text-blue-600 dark:text-blue-400">admin@tdms.com</div>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleDemoLogin('company@example.com', 'password123')}
-              disabled={loading}
-              className="text-left px-3 py-2 text-xs bg-white dark:bg-gray-800 rounded border border-blue-200 dark:border-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/30 disabled:opacity-50"
-            >
-              <div className="font-medium text-blue-900 dark:text-blue-100">Company Admin</div>
-              <div className="text-blue-600 dark:text-blue-400">company@example.com</div>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleDemoLogin('dispatcher@example.com', 'password123')}
-              disabled={loading}
-              className="text-left px-3 py-2 text-xs bg-white dark:bg-gray-800 rounded border border-blue-200 dark:border-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/30 disabled:opacity-50"
-            >
-              <div className="font-medium text-blue-900 dark:text-blue-100">Dispatcher</div>
-              <div className="text-blue-600 dark:text-blue-400">dispatcher@example.com</div>
-            </button>
-          </div>
         </div>
 
         {/* Login Form */}

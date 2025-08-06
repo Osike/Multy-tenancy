@@ -69,7 +69,7 @@ export const authenticateToken = async (req, res, next) => {
     // Find the user and attach to request
     const user = await User.findById(decoded.userId)
       .select('-password -passwordResetToken -passwordResetExpires')
-      .populate('companyId', 'companyName status subscriptionPlan');
+      .populate('companyId', 'companyName subscription isActive');
     
     if (!user) {
       return res.status(401).json({
@@ -87,7 +87,7 @@ export const authenticateToken = async (req, res, next) => {
 
     // Check if company is still active (for non-super_admin users)
     if (user.role !== 'super_admin' && user.companyId) {
-      if (!user.companyId || user.companyId.status !== 'Active') {
+      if (!user.companyId || (user.companyId.subscription?.status !== 'Active' && user.companyId.subscription?.status !== 'Trial')) {
         return res.status(401).json({
           success: false,
           message: 'Company account is inactive',

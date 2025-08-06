@@ -128,3 +128,9 @@ project/
 
 ## 📝 License
 Private project for logistics management.
+
+## MOCK LOGINS FOR THE TIME BEING
+    Super Admin: superadmin@logistics.com / password123
+    🏢 Company Admin: admin@demologistics.com / password123
+    📋 Dispatcher: dispatcher@demologistics.com / password123
+    🚛 Driver: driver@demologistics.com / password123

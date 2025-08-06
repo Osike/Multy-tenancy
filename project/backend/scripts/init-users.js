@@ -1,5 +1,4 @@
 import mongoose from 'mongoose';
-import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
 import User from '../models/User.js';
 import Company from '../models/Company.js';
@@ -19,14 +18,14 @@ const initializeDatabase = async () => {
     await Company.deleteMany({});
     console.log('✅ Existing data cleared');
 
-    // Hash password for all test users
-    const hashedPassword = await bcrypt.hash('password123', 12);
+    // Use plain password - User model will hash it automatically
+    const plainPassword = 'password123';
 
     // 1. Create Super Admin (no company association)
     const superAdmin = new User({
       username: 'superadmin',
       email: 'superadmin@logistics.com',
-      password: hashedPassword,
+      password: plainPassword,
       role: 'super_admin',
       fullName: 'Super Administrator',
       phoneNumber: '+1234567888',
@@ -69,7 +68,7 @@ const initializeDatabase = async () => {
       companyId: demoCompany._id,
       username: 'companyadmin',
       email: 'admin@demologistics.com',
-      password: hashedPassword,
+      password: plainPassword,
       role: 'company_admin',
       fullName: 'Company Administrator',
       phoneNumber: '+1234567891',
@@ -83,7 +82,7 @@ const initializeDatabase = async () => {
       companyId: demoCompany._id,
       username: 'dispatcher1',
       email: 'dispatcher@demologistics.com',
-      password: hashedPassword,
+      password: plainPassword,
       role: 'dispatcher',
       fullName: 'John Dispatcher',
       phoneNumber: '+1234567892',
@@ -97,7 +96,7 @@ const initializeDatabase = async () => {
       companyId: demoCompany._id,
       username: 'driver1',
       email: 'driver@demologistics.com',
-      password: hashedPassword,
+      password: plainPassword,
       role: 'driver',
       fullName: 'Mike Driver',
       phoneNumber: '+1234567893',

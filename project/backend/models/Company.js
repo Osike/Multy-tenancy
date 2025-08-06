@@ -131,12 +131,7 @@ const companySchema = new mongoose.Schema({
     endDate: {
       type: Date,
       required: true,
-      validate: {
-        validator: function(date) {
-          return date > this.subscription.startDate;
-        },
-        message: 'Subscription end date must be after start date'
-      }
+      // Remove the problematic validator - we'll handle this in the controller or pre-save middleware
     },
     maxUsers: {
       type: Number,
@@ -308,6 +303,15 @@ companySchema.virtual('usageStats').get(function() {
 
 // Pre-save middleware
 companySchema.pre('save', function(next) {
+  // Validate subscription dates
+  if (this.subscription && this.subscription.startDate && this.subscription.endDate) {
+    if (this.subscription.endDate <= this.subscription.startDate) {
+      const error = new Error('Subscription end date must be after start date');
+      error.name = 'ValidationError';
+      return next(error);
+    }
+  }
+  
   // Set default billing email to contact email if not provided
   if (!this.billingInfo.billingEmail) {
     this.billingInfo.billingEmail = this.contactEmail;

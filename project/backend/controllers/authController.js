@@ -55,7 +55,7 @@ export const register = async (req, res) => {
         });
       }
 
-      if (company.status !== 'Active') {
+      if (company.subscription.status !== 'Active' && company.subscription.status !== 'Trial') {
         return res.status(400).json({
           success: false,
           message: 'Cannot register user for inactive company',
@@ -176,7 +176,7 @@ export const login = async (req, res) => {
     // For non-super_admin users, check if company is still active
     if (user.role !== 'super_admin' && user.companyId) {
       const company = await Company.findById(user.companyId);
-      if (!company || company.status !== 'Active') {
+      if (!company || (company.subscription.status !== 'Active' && company.subscription.status !== 'Trial')) {
         return res.status(401).json({
           success: false,
           message: 'Company account is inactive. Please contact administrator.',
