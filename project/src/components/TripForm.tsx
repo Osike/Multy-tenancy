@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import api from '../utils/api';
 import {
   TruckIcon,
   UserIcon,
-  CalendarIcon,
   MapPinIcon,
   CurrencyDollarIcon,
   DocumentTextIcon,
@@ -74,14 +74,13 @@ interface Customer {
 const TripForm: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user, api } = useAuth();
+  const { user } = useAuth();
   const isEdit = Boolean(id);
 
   const [loading, setLoading] = useState(false);
   const [trucks, setTrucks] = useState<Truck[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [attachments, setAttachments] = useState<File[]>([]);
   const [specialRequirement, setSpecialRequirement] = useState('');
 
   const [formData, setFormData] = useState<TripFormData>({
@@ -256,12 +255,6 @@ const TripForm: React.FC = () => {
     }));
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      setAttachments(Array.from(e.target.files));
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -312,7 +305,6 @@ const TripForm: React.FC = () => {
       comments: '',
       status: 'Scheduled'
     });
-    setAttachments([]);
     setSpecialRequirement('');
   };
 
@@ -789,7 +781,6 @@ const TripForm: React.FC = () => {
                 <input
                   type="file"
                   multiple
-                  onChange={handleFileUpload}
                   accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
                   className="mt-4"
                 />
